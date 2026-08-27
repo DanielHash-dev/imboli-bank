@@ -1,0 +1,209 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+@layer base {
+  :root {
+    /* Background warm off-white with a hint of cream */
+    --background: 48 30% 98%;
+    --foreground: 160 25% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 160 25% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 25% 12%;
+
+    /* Primary: emerald green */
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: deep emerald */
+    --secondary: 160 60% 22%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 150 20% 94%;
+    --muted-foreground: 160 12% 40%;
+
+    /* Accent: warm gold */
+    --accent: 43 96% 56%;
+    --accent-foreground: 35 92% 18%;
+
+    --destructive: 0 78% 56%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 150 20% 88%;
+    --input: 150 20% 88%;
+    --ring: 160 84% 39%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 160 25% 8%;
+    --foreground: 48 30% 96%;
+
+    --card: 160 25% 11%;
+    --card-foreground: 48 30% 96%;
+
+    --popover: 160 25% 11%;
+    --popover-foreground: 48 30% 96%;
+
+    --primary: 160 84% 45%;
+    --primary-foreground: 160 25% 8%;
+
+    --secondary: 160 50% 30%;
+    --secondary-foreground: 48 30% 96%;
+
+    --muted: 160 20% 16%;
+    --muted-foreground: 150 15% 65%;
+
+    --accent: 43 96% 60%;
+    --accent-foreground: 35 92% 18%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 160 20% 18%;
+    --input: 160 20% 18%;
+    --ring: 160 84% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body, #root {
+    @apply bg-background text-foreground;
+    min-height: 100vh;
+  }
+
+  html, body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-mono-num {
+    font-family: 'JetBrains Mono', 'Menlo', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Subtle bank-note pattern background */
+  .bg-bank-pattern {
+    background-image:
+      radial-gradient(circle at 20% 10%, hsl(var(--primary) / 0.06) 0%, transparent 35%),
+      radial-gradient(circle at 80% 80%, hsl(var(--accent) / 0.08) 0%, transparent 40%);
+  }
+
+  .bg-bank-grid {
+    background-image:
+      linear-gradient(hsl(var(--primary) / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* Soft card lift shadow with green tint */
+  .shadow-bank {
+    box-shadow:
+      0 1px 2px hsl(160 30% 12% / 0.04),
+      0 8px 24px -8px hsl(160 40% 20% / 0.12);
+  }
+
+  .shadow-bank-lg {
+    box-shadow:
+      0 2px 4px hsl(160 30% 12% / 0.05),
+      0 20px 40px -12px hsl(160 40% 20% / 0.18);
+  }
+
+  /* Shimmer for big numbers */
+  @keyframes shimmer-gold {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .animate-shimmer {
+    animation: shimmer-gold 2.4s ease-in-out infinite;
+  }
+
+  /* Slide up entrance for cards */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Pop in */
+  @keyframes pop-in {
+    0% { opacity: 0; transform: scale(0.92); }
+    60% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  .animate-pop-in {
+    animation: pop-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Coin spin */
+  @keyframes coin-spin {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
+  }
+
+  .animate-coin {
+    animation: coin-spin 1.2s ease-in-out;
+    transform-style: preserve-3d;
+  }
+
+  /* Number tick */
+  @keyframes number-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+
+  .animate-number {
+    animation: number-pulse 0.6s ease-out;
+  }
+}
+
+/* Hide scrollbar in mobile-feel containers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
