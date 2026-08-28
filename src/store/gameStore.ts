@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabaseClient';
 import { generateRoomCode } from '@/lib/roomCode';
+import { playCashSound } from '@/lib/sounds';
 import type { Player, Transaction } from '@/types/game';
 
 const INITIAL_BANK_BALANCE = 1000000;
@@ -93,6 +94,17 @@ function subscribeToGame(gameId: string, onChange: () => void) {
     .channel(`game-${gameId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `game_id=eq.${gameId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `game_id=eq.${gameId}` }, onChange)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'transactions', filter: `game_id=eq.${gameId}` },
+      (payload) => {
+        // Toca o som de "cha-ching" só no celular de quem RECEBEU o valor.
+        const myPlayerId = useGameStore.getState().myPlayerId;
+        if (myPlayerId && payload.new?.to_player_id === myPlayerId) {
+          playCashSound();
+        }
+      },
+    )
     .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}` }, onChange)
     .subscribe();
 
