@@ -31,27 +31,31 @@ const TX_TYPES: { value: TxType; label: string; icon: string }[] = [
 export default function Transfer() {
   const navigate = useNavigate();
   const players = useGameStore((s) => s.players);
+  const myPlayerId = useGameStore((s) => s.myPlayerId);
   const { transfer, payTax, payRent, buyProperty } = useGameStore();
 
   const realPlayers = players.filter((p) => !p.isBank);
   const bank = players.find((p) => p.isBank);
+  const myPlayer = players.find((p) => p.id === myPlayerId);
 
-  const [fromId, setFromId] = useState<string>("");
   const [toId, setToId] = useState<string>("");
   const [amount, setAmount] = useState(0);
   const [txType, setTxType] = useState<TxType>("transfer");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const fromPlayer = players.find((p) => p.id === fromId);
+  // "De" é travado: salário sai do Banco, todo o resto sai sempre de você mesmo.
+  const isSalary = txType === "salary";
+  const fromPlayer = isSalary ? bank : myPlayer;
+  const fromId = fromPlayer?.id ?? "";
   const toPlayer = players.find((p) => p.id === toId);
 
   const canSubmit =
-    fromId &&
-    toId &&
+    !!fromId &&
+    !!toId &&
     amount > 0 &&
-    fromPlayer &&
-    toPlayer &&
+    !!fromPlayer &&
+    !!toPlayer &&
     fromPlayer.balance >= amount;
 
   const handleSubmit = () => {
@@ -120,32 +124,29 @@ export default function Transfer() {
           <label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider block mb-2">
             De
           </label>
-          <Select value={fromId} onValueChange={setFromId}>
-            <SelectTrigger className="h-14 rounded-2xl">
-              <SelectValue placeholder="Selecione quem paga..." />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              {players.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  <div className="flex items-center gap-2">
-                    <span>{p.isBank ? "🏦" : p.avatar}</span>
-                    <span>{p.name}</span>
-                    <span className="text-xs text-muted-foreground font-mono-num ml-2">
-                      {p.balance.toLocaleString("pt-BR")}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {fromPlayer && (
-            <p className="text-xs text-muted-foreground mt-1 pl-1">
-              Saldo:{" "}
-              <span className="font-bold font-mono-num">
+          {fromPlayer ? (
+            <div className="h-14 rounded-2xl border border-border bg-muted/50 flex items-center gap-3 px-4">
+              <span className="text-lg">{fromPlayer.isBank ? "🏦" : fromPlayer.avatar}</span>
+              <span className="font-semibold flex-1">
+                {fromPlayer.isBank ? fromPlayer.name : `${fromPlayer.name} (você)`}
+              </span>
+              <span className="text-xs text-muted-foreground font-mono-num">
                 {fromPlayer.balance.toLocaleString("pt-BR")}
               </span>
-            </p>
+            </div>
+          ) : (
+            <div className="h-14 rounded-2xl border border-destructive/40 bg-destructive/5 flex items-center px-4">
+              <span className="text-xs text-destructive font-semibold">
+                Não identificamos seu jogador nessa sala. Volte em "Novo Jogo" e entre
+                de novo com o código, usando o mesmo nome.
+              </span>
+            </div>
           )}
+          <p className="text-xs text-muted-foreground mt-1 pl-1">
+            {isSalary
+              ? "Salário sempre sai do Banco."
+              : "Você só pode pagar a partir do seu próprio saldo."}
+          </p>
         </div>
 
         <div className="flex justify-center">

@@ -20,13 +20,14 @@ const SUGGESTED_NAMES = [
 
 export default function Setup() {
   const navigate = useNavigate();
-  const { createGame, joinGame, addPlayer, resetGame, isLoading } = useGameStore();
+  const { createGame, joinGame, addPlayer, setMyPlayerId, resetGame, isLoading } = useGameStore();
   const isGameActive = useGameStore((s) => s.isGameActive);
   const roomCode = useGameStore((s) => s.roomCode);
 
   const [mode, setMode] = useState<"create" | "join">("create");
 
   // Modo "criar sala"
+  const [hostName, setHostName] = useState("");
   const [tempPlayers, setTempPlayers] = useState<string[]>([]);
   const [newName, setNewName] = useState("");
 
@@ -35,7 +36,7 @@ export default function Setup() {
   const [joinName, setJoinName] = useState("");
 
   const handleAddTemp = (name: string) => {
-    if (!name.trim() || tempPlayers.length >= MAX_PLAYERS) return;
+    if (!name.trim() || tempPlayers.length >= MAX_PLAYERS - 1) return;
     setTempPlayers((prev) => [...prev, name.trim()]);
     setNewName("");
   };
@@ -45,8 +46,11 @@ export default function Setup() {
   };
 
   const handleCreateRoom = async () => {
+    if (!hostName.trim()) return;
     try {
       const code = await createGame();
+      const myId = await addPlayer(hostName.trim());
+      if (myId) setMyPlayerId(myId);
       for (const name of tempPlayers) {
         await addPlayer(name);
       }
@@ -64,12 +68,27 @@ export default function Setup() {
       showError("Sala não encontrada. Confira o código com quem criou o jogo.");
       return;
     }
-    await addPlayer(joinName);
+
+    const trimmedName = joinName.trim();
+    // Se já existe um jogador pré-cadastrado com esse nome, assume ele
+    // em vez de criar um duplicado.
+    const currentPlayers = useGameStore.getState().players;
+    const existing = currentPlayers.find(
+      (p) => !p.isBank && p.name.toLowerCase() === trimmedName.toLowerCase(),
+    );
+
+    if (existing) {
+      setMyPlayerId(existing.id);
+    } else {
+      const myId = await addPlayer(trimmedName);
+      if (myId) setMyPlayerId(myId);
+    }
+
     showSuccess("Você entrou na sala! 🎉");
     navigate("/home");
   };
 
-  const totalDistributed = tempPlayers.length * INITIAL_BALANCE;
+  const totalDistributed = (tempPlayers.length + (hostName.trim() ? 1 : 0)) * INITIAL_BALANCE;
 
   return (
     <PageLayout title="Novo Jogo" subtitle="Bank Imboliário" showNav={false}>
@@ -130,11 +149,26 @@ export default function Setup() {
 
       {mode === "create" ? (
         <>
-          {/* Add player */}
+          {/* Seu nome (obrigatório) */}
+          <div className="mb-6">
+            <label className="text-sm font-bold mb-2 block">Seu nome</label>
+            <Input
+              value={hostName}
+              onChange={(e) => setHostName(e.target.value)}
+              placeholder="Como quer aparecer no jogo"
+              className="h-12 rounded-2xl"
+              maxLength={20}
+            />
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Esse é o seu jogador — só você vai poder fazer pagamentos a partir dele.
+            </p>
+          </div>
+
+          {/* Add other players (opcional) */}
           <div className="mb-6 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-sm">
-                Jogadores ({tempPlayers.length}/{MAX_PLAYERS})
+                Outros jogadores ({tempPlayers.length}/{MAX_PLAYERS - 1})
               </h3>
               <span className="text-xs text-muted-foreground font-semibold">
                 {formatBRL(INITIAL_BALANCE)} cada
@@ -142,8 +176,9 @@ export default function Setup() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Adicione os jogadores que já vão começar na sala, ou deixe em branco
-              e cada um entra depois com o código da sala.
+              Opcional: pré-cadastre quem mais vai jogar. Cada um deles vai
+              precisar entrar depois no próprio celular, usando o código da
+              sala e o mesmo nome, pra poder fazer pagamentos.
             </p>
 
             <div className="flex gap-2">
@@ -159,7 +194,7 @@ export default function Setup() {
               />
               <Button
                 onClick={() => handleAddTemp(newName)}
-                disabled={!newName.trim() || tempPlayers.length >= MAX_PLAYERS}
+                disabled={!newName.trim() || tempPlayers.length >= MAX_PLAYERS - 1}
                 size="icon"
                 className="size-12 rounded-2xl shrink-0"
               >
@@ -244,7 +279,7 @@ export default function Setup() {
           <div className="space-y-3">
             <Button
               onClick={handleCreateRoom}
-              disabled={isLoading}
+              disabled={isLoading || !hostName.trim()}
               className="w-full h-14 rounded-2xl text-base font-bold shadow-bank-lg"
               size="lg"
             >

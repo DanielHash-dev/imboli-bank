@@ -39,6 +39,10 @@ function mapTransactionRow(row: any): Transaction {
   };
 }
 
+function myPlayerStorageKey(gameId: string) {
+  return `imboli-bank-my-player-${gameId}`;
+}
+
 interface GameStore {
   gameId: string | null;
   roomCode: string | null;
@@ -48,12 +52,14 @@ interface GameStore {
   isGameActive: boolean;
   isLoading: boolean;
   error: string | null;
+  myPlayerId: string | null; // qual jogador ESTE dispositivo controla
 
   // Actions
   createGame: () => Promise<string>; // retorna o código da sala
   joinGame: (code: string) => Promise<boolean>; // retorna se conseguiu entrar
   leaveGame: () => void;
-  addPlayer: (name: string) => Promise<void>;
+  setMyPlayerId: (id: string | null) => void;
+  addPlayer: (name: string) => Promise<string | undefined>; // retorna o id do novo jogador
   removePlayer: (id: string) => Promise<void>;
   transfer: (fromId: string, toId: string, amount: number, type: Transaction['type'], description: string) => Promise<void>;
   payTax: (fromId: string, amount: number, description: string) => Promise<void>;
@@ -102,6 +108,19 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   isGameActive: false,
   isLoading: false,
   error: null,
+  myPlayerId: null,
+
+  setMyPlayerId: (id: string | null) => {
+    const { gameId } = get();
+    if (gameId) {
+      if (id) {
+        localStorage.setItem(myPlayerStorageKey(gameId), id);
+      } else {
+        localStorage.removeItem(myPlayerStorageKey(gameId));
+      }
+    }
+    set({ myPlayerId: id });
+  },
 
   createGame: async () => {
     set({ isLoading: true, error: null });
@@ -139,6 +158,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       bankBalance: INITIAL_BANK_BALANCE,
       isGameActive: true,
       isLoading: false,
+      myPlayerId: null,
     });
 
     subscribeToGame(game.id, async () => {
@@ -166,6 +186,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     }
 
     const { players, transactions } = await fetchPlayersAndTransactions(game.id);
+    const savedMyPlayerId = localStorage.getItem(myPlayerStorageKey(game.id));
+    const restoredMyPlayerId = players.some(p => p.id === savedMyPlayerId) ? savedMyPlayerId : null;
 
     set({
       gameId: game.id,
@@ -175,6 +197,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       bankBalance: Number(game.bank_balance),
       isGameActive: true,
       isLoading: false,
+      myPlayerId: restoredMyPlayerId,
     });
 
     subscribeToGame(game.id, async () => {
@@ -198,27 +221,34 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       transactions: [],
       bankBalance: INITIAL_BANK_BALANCE,
       isGameActive: false,
+      myPlayerId: null,
     });
   },
 
   addPlayer: async (name: string) => {
     const state = get();
-    if (!state.gameId) return;
+    if (!state.gameId) return undefined;
 
     const playerIndex = state.players.filter(p => !p.isBank).length;
 
-    await supabase.from('players').insert({
-      game_id: state.gameId,
-      name,
-      avatar: AVATARS[playerIndex % AVATARS.length],
-      balance: INITIAL_PLAYER_BALANCE,
-      color: PLAYER_COLORS[playerIndex % PLAYER_COLORS.length],
-      is_bank: false,
-    });
+    const { data: newPlayer } = await supabase
+      .from('players')
+      .insert({
+        game_id: state.gameId,
+        name,
+        avatar: AVATARS[playerIndex % AVATARS.length],
+        balance: INITIAL_PLAYER_BALANCE,
+        color: PLAYER_COLORS[playerIndex % PLAYER_COLORS.length],
+        is_bank: false,
+      })
+      .select()
+      .single();
 
     const newBankBalance = state.bankBalance - INITIAL_PLAYER_BALANCE;
     await supabase.from('games').update({ bank_balance: newBankBalance }).eq('id', state.gameId);
-    // Realtime cuida de atualizar o state local automaticamente
+    // Realtime cuida de atualizar o state local (lista de players) automaticamente
+
+    return newPlayer?.id as string | undefined;
   },
 
   removePlayer: async (id: string) => {
